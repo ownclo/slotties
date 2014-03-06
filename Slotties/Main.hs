@@ -1,17 +1,21 @@
 import Slotties.Slot
+import Slotties.SlotAcid
 
+import Data.Acid
+
+-- TODO: - Build a command-line interface
+--       - Possibly deal with poor linked list perf
+--       - Add a notion of current time
 main :: IO ()
 main = do
-    let schedule = emptySchedule
-        person1 = Person 1
-        person2 = Person 2
-        slot1 = Slot 1
-        slot2 = Slot 2
+    let person1  = Person 1
+        slot1    = Slot 1
+        _person2 = Person 2
+        _slot2   = Slot 2
 
-        NewReservationOk newSchedule = reserveSlot slot1 person1 schedule
+    state <- openLocalState emptyScheduleDB
+    schedule <- query state QueryAllSchedule
+    print schedule
 
-    print newSchedule
-    print $ reserveSlot slot1 person1 newSchedule
-    print $ reserveSlot slot1 person2 newSchedule
-    print $ reserveSlot slot2 person1 newSchedule
-    print $ reserveSlot slot2 person2 newSchedule
+    res <- update state $ ReserveSlotDB slot1 person1
+    print res

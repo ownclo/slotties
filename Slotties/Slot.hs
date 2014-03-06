@@ -1,19 +1,46 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
+
 module Slotties.Slot where
 
-import Data.Function( on )
-
+import Control.Applicative
 import qualified Data.Bimap as BM
 import Data.Bimap( Bimap )
+import Data.SafeCopy
+import Data.Typeable
 
 data Person = Person {
         personId :: Int
-    } deriving (Eq, Show, Ord)
+    } deriving (Eq, Show, Ord, Typeable)
 
 data Slot = Slot {
         slotTime :: Int
-    } deriving (Eq, Show, Ord)
+    } deriving (Eq, Show, Ord, Typeable)
+
+data ReservationResult
+    = NewReservationOk  Schedule
+    | SameReservationOk Schedule
+    | PersonHasSlot     Slot
+    | SlotReservedBy    Person
+    deriving (Show, Typeable)
 
 type Schedule = Bimap Slot Person
+instance Typeable Schedule
+
+deriveSafeCopy 0 'base ''Person
+deriveSafeCopy 0 'base ''Slot
+deriveSafeCopy 0 'base ''ReservationResult
+
+instance (SafeCopy a, SafeCopy b,
+          Ord a, Ord b) =>
+             SafeCopy (Bimap a b) where
+    putCopy = contain . safePut . BM.toAscList
+    getCopy = contain $ BM.fromAscPairListUnchecked <$> safeGet
+
 
 emptySchedule :: Schedule
 emptySchedule = BM.empty
@@ -31,13 +58,6 @@ cancelReservation = BM.deleteR
 
 freeSlot :: Slot -> Schedule -> Schedule
 freeSlot = BM.delete
-
-data ReservationResult
-    = NewReservationOk  Schedule
-    | SameReservationOk Schedule
-    | PersonHasSlot     Slot
-    | SlotReservedBy    Person
-    deriving Show
 
 maybeSchedule :: ReservationResult -> Maybe Schedule
 maybeSchedule (NewReservationOk s) = Just s
